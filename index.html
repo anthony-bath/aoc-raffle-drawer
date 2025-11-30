@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AoC Raffle Drawer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AoC Raffle Drawer</h1>
+            <p class="subtitle">Spin the wheel to pick a winner from your Advent of Code leaderboard</p>
+        </header>
+
+        <main>
+            <section class="controls">
+                <div class="control-group fetch-group">
+                    <button id="fetch-btn" class="fetch-btn">
+                        <span class="icon">🔄</span> Fetch Leaderboard
+                    </button>
+                    <span id="status-msg" class="status-msg"></span>
+                </div>
+
+                <div class="control-group day-select-group" id="day-select-container" style="display: none;">
+                    <label for="day-select">Select Day:</label>
+                    <select id="day-select">
+                        <option value="" disabled selected>Choose a day...</option>
+                    </select>
+                </div>
+            </section>
+
+            <section class="wheel-container">
+                <div class="wheel-wrapper">
+                    <canvas id="wheel-canvas" width="600" height="600"></canvas>
+                    <div class="wheel-pointer"></div>
+                </div>
+                
+                <button id="spin-btn" class="spin-btn" disabled>SPIN!</button>
+            </section>
+
+            <section id="winner-display" class="winner-display hidden">
+                <h2>🎉 Winner! 🎉</h2>
+                <div id="winner-name" class="winner-name"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
