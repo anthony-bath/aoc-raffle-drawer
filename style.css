@@ -116,6 +116,31 @@ h1 {
     color: var(--success-color);
 }
 
+.divider {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* File Upload */
+input[type="file"] {
+    display: none;
+}
+
+.custom-file-upload {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent-color);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.custom-file-upload:hover {
+    color: var(--accent-hover);
+}
+
 /* Day Select */
 select {
     background: transparent;
@@ -205,37 +230,94 @@ canvas {
 }
 
 /* Winner Display */
+/* Winner Display Overlay */
 .winner-display {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid var(--success-color);
-    padding: 2rem;
-    border-radius: 16px;
-    margin-top: 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.85); /* Backdrop */
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
     opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.5s ease-out;
+    pointer-events: none; /* Allow clicking through when hidden */
+    transition: opacity 0.3s ease-out;
 }
 
 .winner-display.visible {
     opacity: 1;
-    transform: translateY(0);
-    animation: pulse 2s infinite;
+    pointer-events: auto;
+    animation: none; /* Remove pulse animation from container */
 }
 
 .winner-display.hidden {
-    display: none;
+    display: flex; /* Keep flex layout but hide via opacity/pointer-events */
+    opacity: 0;
+    pointer-events: none;
+}
+
+.winner-content {
+    background: var(--card-bg);
+    padding: 3rem 4rem;
+    border-radius: 24px;
+    border: 2px solid var(--success-color);
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.winner-display.visible .winner-content {
+    transform: scale(1);
+    animation: pulse-border 2s infinite;
 }
 
 .winner-display h2 {
     color: var(--success-color);
     font-family: var(--font-heading);
-    margin-bottom: 0.5rem;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
 
 .winner-name {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 3.5rem;
+    font-weight: 800;
     color: var(--text-primary);
+    margin-bottom: 2rem;
+    background: linear-gradient(135deg, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.close-btn {
+    background: var(--text-secondary);
+    color: var(--bg-color);
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: var(--text-primary);
+    transform: translateY(-2px);
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
 /* Animations */

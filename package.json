@@ -4,7 +4,8 @@
   "description": "Advent of Code Raffle Drawer",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js & open http://localhost:3001"
+    "start": "node server.js",
+    "open": "open http://localhost:3001"
   },
   "dependencies": {
     "dotenv": "^16.3.1",

@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const fetchBtn = document.getElementById('fetch-btn');
+    const fileInput = document.getElementById('file-input');
     const statusMsg = document.getElementById('status-msg');
     const daySelectContainer = document.getElementById('day-select-container');
     const daySelect = document.getElementById('day-select');
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     const winnerDisplay = document.getElementById('winner-display');
     const winnerName = document.getElementById('winner-name');
+    const closeWinnerBtn = document.getElementById('close-winner-btn');
 
     // State
     let leaderboardData = null;
@@ -24,8 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners
     fetchBtn.addEventListener('click', handleFetchLeaderboard);
+    fileInput.addEventListener('change', handleFileUpload);
     daySelect.addEventListener('change', handleDaySelect);
     spinBtn.addEventListener('click', spinWheel);
+    closeWinnerBtn.addEventListener('click', () => {
+        winnerDisplay.classList.remove('visible');
+        winnerDisplay.classList.add('hidden');
+        spinBtn.disabled = false;
+    });
 
     // Fetch Handler
     async function handleFetchLeaderboard() {
@@ -58,6 +66,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // File Upload Handler
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        statusMsg.textContent = 'Loading file...';
+        statusMsg.className = 'status-msg';
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                leaderboardData = JSON.parse(e.target.result);
+                console.log("Leaderboard loaded from file:", leaderboardData);
+                
+                statusMsg.textContent = 'File Loaded!';
+                statusMsg.classList.add('success');
+
+                populateDaySelect();
+                daySelectContainer.style.display = 'flex';
+                resetWheel();
+            } catch (error) {
+                alert('Error parsing JSON file.');
+                console.error(error);
+                statusMsg.textContent = 'Error parsing file';
+                statusMsg.classList.add('error');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     // Populate Day Selector
     function populateDaySelect() {
         daySelect.innerHTML = '<option value="" disabled selected>Choose a day...</option>';
@@ -65,9 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Find all days present in the data
         const days = new Set();
         Object.values(leaderboardData.members).forEach(member => {
-            Object.keys(member.completion_day_level).forEach(day => {
-                days.add(parseInt(day));
-            });
+            if (member.completion_day_level) {
+                Object.keys(member.completion_day_level).forEach(day => {
+                    days.add(parseInt(day));
+                });
+            }
         });
 
         const sortedDays = Array.from(days).sort((a, b) => a - b);
@@ -97,14 +137,19 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEntries = [];
         
         Object.values(leaderboardData.members).forEach(member => {
-            if (member.completion_day_level[day]) {
+            // Ensure completion_day_level exists and has the day key
+            if (member.completion_day_level && member.completion_day_level[day]) {
                 const stars = Object.keys(member.completion_day_level[day]).length; // 1 or 2
-                // Give 1 entry per star
-                for (let i = 0; i < stars; i++) {
-                    currentEntries.push({
-                        name: member.name || `(Anon #${member.id})`,
-                        color: COLORS[currentEntries.length % COLORS.length]
-                    });
+                
+                // Double check star count is valid (> 0)
+                if (stars > 0) {
+                    // Give 1 entry per star
+                    for (let i = 0; i < stars; i++) {
+                        currentEntries.push({
+                            name: member.name || `(Anon #${member.id})`,
+                            color: COLORS[currentEntries.length % COLORS.length]
+                        });
+                    }
                 }
             }
         });

@@ -22,6 +22,11 @@
                     <button id="fetch-btn" class="fetch-btn">
                         <span class="icon">🔄</span> Fetch Leaderboard
                     </button>
+                    <span class="divider">OR</span>
+                    <label for="file-input" class="custom-file-upload">
+                        <span class="icon">📂</span> Upload JSON
+                    </label>
+                    <input type="file" id="file-input" accept=".json">
                     <span id="status-msg" class="status-msg"></span>
                 </div>
 
@@ -43,8 +48,11 @@
             </section>
 
             <section id="winner-display" class="winner-display hidden">
-                <h2>🎉 Winner! 🎉</h2>
-                <div id="winner-name" class="winner-name"></div>
+                <div class="winner-content">
+                    <h2>🎉 Winner! 🎉</h2>
+                    <div id="winner-name" class="winner-name"></div>
+                    <button id="close-winner-btn" class="close-btn">Spin Again</button>
+                </div>
             </section>
         </main>
     </div>
