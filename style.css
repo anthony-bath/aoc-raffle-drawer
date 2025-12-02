@@ -120,6 +120,19 @@ h1 {
     color: var(--text-secondary);
     font-size: 0.8rem;
     font-weight: 600;
+    opacity: 0.5;
+}
+
+.day-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: fadeInRight 0.5s ease-out;
+}
+
+@keyframes fadeInRight {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 /* File Upload */

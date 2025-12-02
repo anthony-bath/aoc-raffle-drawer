@@ -18,7 +18,7 @@
 
         <main>
             <section class="controls">
-                <div class="control-group fetch-group">
+                <div class="control-group main-toolbar">
                     <button id="fetch-btn" class="fetch-btn">
                         <span class="icon">🔄</span> Fetch Leaderboard
                     </button>
@@ -28,13 +28,14 @@
                     </label>
                     <input type="file" id="file-input" accept=".json">
                     <span id="status-msg" class="status-msg"></span>
-                </div>
 
-                <div class="control-group day-select-group" id="day-select-container" style="display: none;">
-                    <label for="day-select">Select Day:</label>
-                    <select id="day-select">
-                        <option value="" disabled selected>Choose a day...</option>
-                    </select>
+                    <div id="day-select-container" class="day-select-wrapper" style="display: none;">
+                        <span class="divider">|</span>
+                        <label for="day-select">Day:</label>
+                        <select id="day-select">
+                            <option value="" disabled selected>Choose a day...</option>
+                        </select>
+                    </div>
                 </div>
             </section>
 
