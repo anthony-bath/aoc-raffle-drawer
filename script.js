@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const winnerDisplay = document.getElementById('winner-display');
     const winnerName = document.getElementById('winner-name');
     const closeWinnerBtn = document.getElementById('close-winner-btn');
+    const entrantsContainer = document.getElementById('entrants-container');
+    const entrantsTableBody = document.querySelector('#entrants-table tbody');
+    const entrantCount = document.getElementById('entrant-count');
+    const copyBtn = document.getElementById('copy-btn');
+    const wheelPointer = document.querySelector('.wheel-pointer');
+
+    // Initial State
+    toggleWheelControls(false);
 
     // State
     let leaderboardData = null;
@@ -34,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         winnerDisplay.classList.add('hidden');
         spinBtn.disabled = false;
     });
+    copyBtn.addEventListener('click', copyEntrantsToClipboard);
 
     // Fetch Handler
     async function handleFetchLeaderboard() {
@@ -135,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Calculate Entries
     function calculateEntries(day) {
         currentEntries = [];
+        const entrantMap = new Map(); // Track stars per person for the table
         
         Object.values(leaderboardData.members).forEach(member => {
             // Ensure completion_day_level exists and has the day key
@@ -143,10 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Double check star count is valid (> 0)
                 if (stars > 0) {
+                    const name = member.name || `(Anon #${member.id})`;
+                    entrantMap.set(name, stars);
+
                     // Give 1 entry per star
                     for (let i = 0; i < stars; i++) {
                         currentEntries.push({
-                            name: member.name || `(Anon #${member.id})`,
+                            name: name,
                             color: COLORS[currentEntries.length % COLORS.length]
                         });
                     }
@@ -157,6 +170,61 @@ document.addEventListener('DOMContentLoaded', () => {
         // Shuffle entries for better distribution
         shuffleArray(currentEntries);
         console.log(`Day ${day}: ${currentEntries.length} entries generated.`);
+        
+        updateEntrantsTable(entrantMap);
+        toggleWheelControls(currentEntries.length > 0);
+    }
+
+    function updateEntrantsTable(entrantMap) {
+        entrantsTableBody.innerHTML = '';
+        entrantCount.textContent = entrantMap.size;
+        entrantsContainer.style.display = 'flex';
+
+        // Sort by stars (desc), then name (asc)
+        const sortedEntrants = Array.from(entrantMap.entries()).sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1];
+            return a[0].localeCompare(b[0]);
+        });
+
+        sortedEntrants.forEach(([name, stars]) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${'⭐'.repeat(stars)}</td>
+            `;
+            entrantsTableBody.appendChild(row);
+        });
+    }
+
+    function toggleWheelControls(visible) {
+        if (visible) {
+            spinBtn.style.display = 'block';
+            wheelPointer.style.display = 'block';
+            spinBtn.disabled = false;
+        } else {
+            spinBtn.style.display = 'none';
+            wheelPointer.style.display = 'none';
+            spinBtn.disabled = true;
+        }
+    }
+
+    function copyEntrantsToClipboard() {
+        const rows = Array.from(document.querySelectorAll('#entrants-table tbody tr'));
+        if (rows.length === 0) return;
+
+        const text = rows.map(row => {
+            const name = row.cells[0].textContent;
+            const stars = row.cells[1].textContent;
+            return `${name} ${stars}`;
+        }).join('\n');
+
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '✅';
+            setTimeout(() => copyBtn.textContent = originalText, 2000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
     }
 
     // Fisher-Yates Shuffle
@@ -295,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEntries = [];
         currentRotation = 0;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        spinBtn.disabled = true;
+        toggleWheelControls(false);
         winnerDisplay.classList.add('hidden');
     }
 });

@@ -39,14 +39,36 @@
                 </div>
             </section>
 
-            <section class="wheel-container">
-                <div class="wheel-wrapper">
-                    <canvas id="wheel-canvas" width="600" height="600"></canvas>
-                    <div class="wheel-pointer"></div>
-                </div>
-                
-                <button id="spin-btn" class="spin-btn" disabled>SPIN!</button>
-            </section>
+            <div class="content-grid">
+                <section class="wheel-container">
+                    <div class="wheel-wrapper">
+                        <canvas id="wheel-canvas" width="600" height="600"></canvas>
+                        <div class="wheel-pointer"></div>
+                    </div>
+                    
+                    <button id="spin-btn" class="spin-btn" disabled>SPIN!</button>
+                </section>
+
+                <section class="entrants-container" id="entrants-container" style="display: none;">
+                    <div class="entrants-header">
+                        <h2>Entrants <span id="entrant-count" class="badge">0</span></h2>
+                        <button id="copy-btn" class="icon-btn" title="Copy to Clipboard">📋</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="entrants-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Stars</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Rows populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
             <section id="winner-display" class="winner-display hidden">
                 <div class="winner-content">
