@@ -34,7 +34,22 @@ app.get('/api/leaderboard', async (req, res) => {
         
         if (now - cache.timestamp < CACHE_DURATION) {
             console.log('Serving from cache');
-            return res.json(cache.data);
+            let data = cache.data;
+            
+            // Filter excluded members
+            const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
+            if (excludedIds.length > 0) {
+                console.log(`Excluding members: ${excludedIds.join(', ')}`);
+                const filteredMembers = {};
+                Object.entries(data.members).forEach(([id, member]) => {
+                    if (!excludedIds.includes(id)) {
+                        filteredMembers[id] = member;
+                    }
+                });
+                data.members = filteredMembers;
+            }
+            
+            return res.json(data);
         }
     } catch (err) {
         // Cache doesn't exist or is invalid, ignore
@@ -62,6 +77,19 @@ app.get('/api/leaderboard', async (req, res) => {
             timestamp: Date.now(),
             data: data
         }));
+
+        // Filter excluded members
+        const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
+        if (excludedIds.length > 0) {
+            console.log(`Excluding members: ${excludedIds.join(', ')}`);
+            const filteredMembers = {};
+            Object.entries(data.members).forEach(([id, member]) => {
+                if (!excludedIds.includes(id)) {
+                    filteredMembers[id] = member;
+                }
+            });
+            data.members = filteredMembers;
+        }
 
         res.json(data);
     } catch (error) {
