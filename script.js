@@ -212,11 +212,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const rows = Array.from(document.querySelectorAll('#entrants-table tbody tr'));
         if (rows.length === 0) return;
 
-        const text = rows.map(row => {
-            const name = row.cells[0].textContent;
-            const stars = row.cells[1].textContent;
-            return `${name} ${stars}`;
-        }).join('\n');
+        // Extract names
+        const names = rows.map(row => row.cells[0].textContent);
+
+        // Sort alphabetically
+        names.sort((a, b) => a.localeCompare(b));
+
+        // Get selected day
+        const day = document.getElementById('day-select').value;
+
+        // Format output
+        const text = `Day ${day} Entrants:\n\n` + names.map(name => `- ${name}`).join('\n');
 
         navigator.clipboard.writeText(text).then(() => {
             const originalText = copyBtn.textContent;
