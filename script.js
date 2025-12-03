@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const day = document.getElementById('day-select').value;
 
         // Format output
-        const text = `Day ${day} Entrants:\n\n` + names.map(name => `- ${name}`).join('\n');
+        const text = `Day ${day} Entrants (${names.length}):\n\n` + names.join(', ');
 
         navigator.clipboard.writeText(text).then(() => {
             const originalText = copyBtn.textContent;
