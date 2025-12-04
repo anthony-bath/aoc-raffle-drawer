@@ -371,5 +371,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         toggleWheelControls(false);
         winnerDisplay.classList.add('hidden');
+        
+        // Reset UI
+        daySelect.value = "";
+        entrantsContainer.style.display = 'none';
     }
 });
