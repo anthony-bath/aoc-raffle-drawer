@@ -19,13 +19,14 @@ app.get('/api/leaderboard', async (req, res) => {
     const year = process.env.YEAR;
     const sessionToken = process.env.SESSION_TOKEN;
     const leaderboardId = process.env.LEADERBOARD_ID;
+    const userAgent = process.env.USER_AGENT;
     const CACHE_FILE = '.cache.json';
     const WINNERS_FILE = 'daily-winners.json';
     const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in ms
 
-    if (!year || !sessionToken || !leaderboardId) {
-        console.error('Missing environment variables:', { year, leaderboardId, hasToken: !!sessionToken });
-        return res.status(500).json({ error: 'Missing YEAR, SESSION_TOKEN or LEADERBOARD_ID in .env file' });
+    if (!year || !sessionToken || !leaderboardId || !userAgent) {
+        console.error('Missing environment variables:', { year, leaderboardId, hasToken: !!sessionToken, hasUserAgent: !!userAgent });
+        return res.status(500).json({ error: 'Missing YEAR, SESSION_TOKEN, LEADERBOARD_ID, or USER_AGENT in .env file' });
     }
 
     // Check cache
@@ -74,7 +75,7 @@ app.get('/api/leaderboard', async (req, res) => {
         const response = await fetch(url, {
             headers: {
                 'Cookie': `session=${sessionToken}`,
-                'User-Agent': 'github.com/anthonybath/aoc-raffle-drawer by anthony@example.com' // Polite User-Agent
+                'User-Agent': userAgent
             }
         });
 
