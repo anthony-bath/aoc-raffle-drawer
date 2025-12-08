@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
+app.use(express.json());
 
 const fs = require('fs').promises;
 
@@ -19,6 +20,7 @@ app.get('/api/leaderboard', async (req, res) => {
     const sessionToken = process.env.SESSION_TOKEN;
     const leaderboardId = process.env.LEADERBOARD_ID;
     const CACHE_FILE = '.cache.json';
+    const WINNERS_FILE = 'daily-winners.json';
     const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in ms
 
     if (!year || !sessionToken || !leaderboardId) {
@@ -38,6 +40,16 @@ app.get('/api/leaderboard', async (req, res) => {
             
             // Filter excluded members
             const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
+            
+            // Add daily winners to excluded list
+            try {
+                const winnersRaw = await fs.readFile(WINNERS_FILE, 'utf8');
+                const winners = JSON.parse(winnersRaw);
+                winners.forEach(w => excludedIds.push(String(w.id)));
+            } catch (e) {
+                // Ignore if file doesn't exist
+            }
+
             if (excludedIds.length > 0) {
                 console.log(`Excluding members: ${excludedIds.join(', ')}`);
                 const filteredMembers = {};
@@ -80,6 +92,16 @@ app.get('/api/leaderboard', async (req, res) => {
 
         // Filter excluded members
         const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
+
+        // Add daily winners to excluded list
+        try {
+            const winnersRaw = await fs.readFile(WINNERS_FILE, 'utf8');
+            const winners = JSON.parse(winnersRaw);
+            winners.forEach(w => excludedIds.push(String(w.id)));
+        } catch (e) {
+            // Ignore if file doesn't exist
+        }
+
         if (excludedIds.length > 0) {
             console.log(`Excluding members: ${excludedIds.join(', ')}`);
             const filteredMembers = {};
@@ -95,6 +117,35 @@ app.get('/api/leaderboard', async (req, res) => {
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ error: 'Failed to fetch leaderboard', details: error.message });
+    }
+});
+
+app.post('/api/winner', async (req, res) => {
+    const WINNERS_FILE = 'daily-winners.json';
+    try {
+        const winner = req.body;
+        if (!winner || !winner.id) {
+            return res.status(400).json({ error: 'Invalid winner data' });
+        }
+
+        let winners = [];
+        try {
+            const data = await fs.readFile(WINNERS_FILE, 'utf8');
+            winners = JSON.parse(data);
+        } catch (e) {
+            // File likely doesn't exist, start empty
+        }
+
+        // Add timestamp
+        winner.timestamp = Date.now();
+        winners.push(winner);
+
+        await fs.writeFile(WINNERS_FILE, JSON.stringify(winners, null, 2));
+        console.log(`Saved winner: ${winner.name} (${winner.id})`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving winner:', error);
+        res.status(500).json({ error: 'Failed to save winner' });
     }
 });
 

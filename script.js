@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (let i = 0; i < stars; i++) {
                         currentEntries.push({
                             name: name,
+                            id: member.id,
                             color: COLORS[currentEntries.length % COLORS.length]
                         });
                     }
@@ -363,6 +364,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Confetti effect could go here
         console.log("Winner:", winner);
+
+        // Save winner to backend
+        fetch('/api/winner', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: winner.id,
+                name: winner.name,
+                day: document.getElementById('day-select').value
+            })
+        }).then(res => res.json())
+          .then(data => {
+              if (data.success) {
+                  console.log('Winner saved successfully');
+              } else {
+                  console.error('Failed to save winner:', data.error);
+              }
+          })
+          .catch(err => console.error('Error saving winner:', err));
     }
 
     function resetWheel() {
