@@ -41,12 +41,12 @@ app.get('/api/leaderboard', async (req, res) => {
             
             // Filter excluded members
             const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
-            
-            // Add daily winners to excluded list
+            // We NO LONGER exclude daily winners here. We send them to the client.
+            let dailyWinnersIds = [];
             try {
                 const winnersRaw = await fs.readFile(WINNERS_FILE, 'utf8');
                 const winners = JSON.parse(winnersRaw);
-                winners.forEach(w => excludedIds.push(String(w.id)));
+                dailyWinnersIds = winners.map(w => String(w.id));
             } catch (e) {
                 // Ignore if file doesn't exist
             }
@@ -62,7 +62,13 @@ app.get('/api/leaderboard', async (req, res) => {
                 data.members = filteredMembers;
             }
             
-            return res.json(data);
+            // Inject daily winners into the response
+            const responseData = {
+                ...data,
+                dailyWinners: dailyWinnersIds
+            };
+
+            return res.json(responseData);
         }
     } catch (err) {
         // Cache doesn't exist or is invalid, ignore
@@ -93,12 +99,12 @@ app.get('/api/leaderboard', async (req, res) => {
 
         // Filter excluded members
         const excludedIds = (process.env.EXCLUDED_MEMBER_IDS || '').split(',').map(id => id.trim());
-
-        // Add daily winners to excluded list
+        
+        let dailyWinnersIds = [];
         try {
             const winnersRaw = await fs.readFile(WINNERS_FILE, 'utf8');
             const winners = JSON.parse(winnersRaw);
-            winners.forEach(w => excludedIds.push(String(w.id)));
+            dailyWinnersIds = winners.map(w => String(w.id));
         } catch (e) {
             // Ignore if file doesn't exist
         }
@@ -114,7 +120,13 @@ app.get('/api/leaderboard', async (req, res) => {
             data.members = filteredMembers;
         }
 
-        res.json(data);
+        // Inject daily winners into the response
+        const responseData = {
+            ...data,
+            dailyWinners: dailyWinnersIds
+        };
+
+        res.json(responseData);
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ error: 'Failed to fetch leaderboard', details: error.message });

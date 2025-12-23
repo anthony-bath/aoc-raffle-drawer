@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const entrantsTableBody = document.querySelector('#entrants-table tbody');
     const entrantCount = document.getElementById('entrant-count');
     const copyBtn = document.getElementById('copy-btn');
+
     const wheelPointer = document.querySelector('.wheel-pointer');
+    const endOfEventCheckbox = document.getElementById('end-of-event-mode');
 
     // Initial State
     toggleWheelControls(false);
@@ -25,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentEntries = [];
     let currentRotation = 0;
     let isSpinning = false;
+    let pendingRemovalId = null;
 
     // Constants
     const COLORS = [
@@ -41,8 +44,38 @@ document.addEventListener('DOMContentLoaded', () => {
         winnerDisplay.classList.remove('visible');
         winnerDisplay.classList.add('hidden');
         spinBtn.disabled = false;
+
+        // Process pending removal if any (End of Event Mode)
+        if (pendingRemovalId) {
+            console.log(`Processing delayed removal for winner ID: ${pendingRemovalId}`);
+            const originalLength = currentEntries.length;
+            currentEntries = currentEntries.filter(e => e.id !== pendingRemovalId);
+            console.log(`Removed ${originalLength - currentEntries.length} entries.`);
+            
+            drawWheel();
+            pendingRemovalId = null;
+        }
     });
     copyBtn.addEventListener('click', copyEntrantsToClipboard);
+    endOfEventCheckbox.addEventListener('change', handleModeChange);
+
+    function handleModeChange() {
+        // Clear current state when switching modes
+        resetWheel();
+        
+        // If we have data, re-populate UI based on new mode
+        if (leaderboardData) {
+            if (endOfEventCheckbox.checked) {
+                daySelectContainer.style.display = 'none';
+                calculateEndOfEventEntries();
+                drawWheel();
+                spinBtn.disabled = currentEntries.length === 0;
+            } else {
+                populateDaySelect();
+                daySelectContainer.style.display = 'flex';
+            }
+        }
+    }
 
     // Fetch Handler
     async function handleFetchLeaderboard() {
@@ -51,7 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMsg.className = 'status-msg';
 
         try {
-            const response = await fetch('/api/leaderboard');
+            // We don't need to pass ignoreDailyWinners logic anymore, the server always returns them now
+            // and we filter on the client side.
+            const response = await fetch(`/api/leaderboard`);
             if (!response.ok) {
                 const errData = await response.json();
                 throw new Error(errData.error || 'Failed to fetch');
@@ -92,8 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusMsg.textContent = 'File Loaded!';
                 statusMsg.classList.add('success');
 
-                populateDaySelect();
-                daySelectContainer.style.display = 'flex';
+                if (endOfEventCheckbox.checked) {
+                    daySelectContainer.style.display = 'none';
+                    calculateEndOfEventEntries();
+                    drawWheel();
+                    spinBtn.disabled = currentEntries.length === 0;
+                } else {
+                    populateDaySelect();
+                    daySelectContainer.style.display = 'flex';
+                }
                 resetWheel();
             } catch (error) {
                 alert('Error parsing JSON file.');
@@ -141,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
         winnerDisplay.classList.remove('visible');
     }
 
-    // Calculate Entries
     function calculateEntries(day) {
         currentEntries = [];
         const entrantMap = new Map(); // Track stars per person for the table
@@ -150,6 +191,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure completion_day_level exists and has the day key
             if (member.completion_day_level && member.completion_day_level[day]) {
                 const stars = Object.keys(member.completion_day_level[day]).length; // 1 or 2
+
+                // Check if this member is a daily winner
+                const isDailyWinner = leaderboardData.dailyWinners && leaderboardData.dailyWinners.includes(String(member.id));
+                
+                // In Daily Mode, we exclude daily winners
+                if (isDailyWinner) {
+                    return;
+                }
+                
                 
                 // Double check star count is valid (> 0)
                 if (stars > 0) {
@@ -168,33 +218,72 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        finishEntryCalculation(entrantMap, `Day ${day}`);
+    }
+
+    function calculateEndOfEventEntries() {
+    currentEntries = [];
+    const entrantMap = new Map(); // Track entries (stars) per person
+    
+    Object.values(leaderboardData.members).forEach(member => {
+        if (!member.completion_day_level) return;
+
+        let entryCount = 0;
+        // Iterate all completed days
+        Object.values(member.completion_day_level).forEach(dayStars => {
+            // Add number of stars for this day (1 or 2)
+            entryCount += Object.keys(dayStars).length;
+        });
+
+        if (entryCount > 0) {
+            const name = member.name || `(Anon #${member.id})`;
+            entrantMap.set(name, entryCount); // Display "entries" aka stars
+
+            // Push a single entry with weight = entryCount
+            currentEntries.push({
+                name: name,
+                id: member.id,
+                weight: entryCount, // Use stars as weight
+                color: COLORS[currentEntries.length % COLORS.length]
+            });
+        }
+    });
+
+    finishEntryCalculation(entrantMap, "End of Event");
+}
+
+    function finishEntryCalculation(entrantMap, contextLabel) {
         // Shuffle entries for better distribution
         shuffleArray(currentEntries);
-        console.log(`Day ${day}: ${currentEntries.length} entries generated.`);
+        console.log(`${contextLabel}: ${currentEntries.length} entries generated.`);
         
         updateEntrantsTable(entrantMap);
         toggleWheelControls(currentEntries.length > 0);
     }
 
     function updateEntrantsTable(entrantMap) {
-        entrantsTableBody.innerHTML = '';
-        entrantCount.textContent = entrantMap.size;
-        entrantsContainer.style.display = 'flex';
+    entrantsTableBody.innerHTML = '';
+    entrantCount.textContent = entrantMap.size;
+    entrantsContainer.style.display = 'flex';
 
-        // Sort by stars (desc), then name (asc)
-        const sortedEntrants = Array.from(entrantMap.entries()).sort((a, b) => {
-            if (b[1] !== a[1]) return b[1] - a[1];
-            return a[0].localeCompare(b[0]);
-        });
+    // Sort by stars (desc), then name (asc)
+    const sortedEntrants = Array.from(entrantMap.entries()).sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+    });
 
-        sortedEntrants.forEach(([name, stars]) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${name}</td>
-                <td>${'⭐'.repeat(stars)}</td>
-            `;
-            entrantsTableBody.appendChild(row);
-        });
+    sortedEntrants.forEach(([name, stars]) => {
+        const row = document.createElement('tr');
+        const starDisplay = endOfEventCheckbox.checked 
+            ? `${stars} ⭐️`
+            : '⭐'.repeat(stars);
+
+        row.innerHTML = `
+            <td>${name}</td>
+            <td>${starDisplay}</td>
+        `;
+        entrantsTableBody.appendChild(row);
+    });
     }
 
     function toggleWheelControls(visible) {
@@ -243,48 +332,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Draw Wheel
-    function drawWheel() {
-        if (currentEntries.length === 0) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            return;
-        }
-
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = canvas.width / 2 - 10;
-        const arc = (2 * Math.PI) / currentEntries.length;
-
+function drawWheel() {
+    if (currentEntries.length === 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2 - 10;
+    
+    // Calculate total weight (default to 1 if weight is missing for compatibility)
+    const totalWeight = currentEntries.reduce((sum, entry) => sum + (entry.weight || 1), 0);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(currentRotation);
+
+    let startAngle = 0;
+
+    currentEntries.forEach((entry) => {
+        // Calculate slice size based on weight
+        const sliceWeight = entry.weight || 1;
+        const sliceAngle = (sliceWeight / totalWeight) * 2 * Math.PI;
+        const endAngle = startAngle + sliceAngle;
         
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(currentRotation);
+        // Slice
+        ctx.beginPath();
+        ctx.fillStyle = entry.color;
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, startAngle, endAngle);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+        ctx.stroke();
 
-        currentEntries.forEach((entry, i) => {
-            const angle = i * arc;
-            
-            // Slice
-            ctx.beginPath();
-            ctx.fillStyle = entry.color;
-            ctx.moveTo(0, 0);
-            ctx.arc(0, 0, radius, angle, angle + arc);
-            ctx.lineTo(0, 0);
-            ctx.fill();
-            ctx.stroke();
-
-            // Text
+        // Text
+        // Only draw text if the slice is big enough (e.g. > 3 degrees)
+        if (sliceAngle > 0.05) { 
             ctx.save();
-            ctx.translate(Math.cos(angle + arc / 2) * (radius * 0.75), Math.sin(angle + arc / 2) * (radius * 0.75));
-            ctx.rotate(angle + arc / 2);
+            const textAngle = startAngle + sliceAngle / 2;
+            ctx.translate(Math.cos(textAngle) * (radius * 0.75), Math.sin(textAngle) * (radius * 0.75));
+            ctx.rotate(textAngle);
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 14px Inter';
             ctx.textAlign = 'right';
             ctx.fillText(entry.name, 0, 5);
             ctx.restore();
-        });
+        }
 
-        ctx.restore();
-    }
+        startAngle = endAngle;
+    });
+
+    ctx.restore();
+}
 
     // Spin Wheel
     function spinWheel() {
@@ -329,31 +431,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Determine Winner
-    function determineWinner(finalRotation) {
-        // Normalize rotation to 0-2PI
-        const normalizedRotation = finalRotation % (2 * Math.PI);
-        
-        // The pointer is at the top (3PI/2 or -PI/2 in canvas coords, but we rotated the context)
-        // Actually, we drew the wheel starting at 0 (right).
-        // Pointer is at top (270 degrees or 3PI/2).
-        // To find the slice under the pointer, we need to consider the rotation.
-        // The wheel rotated clockwise by `normalizedRotation`.
-        // So the slice at the top is the one that WAS at (3PI/2 - normalizedRotation).
-        
-        const arc = (2 * Math.PI) / currentEntries.length;
-        
-        // Calculate angle of the pointer relative to the wheel's 0
-        let pointerAngle = (3 * Math.PI / 2) - normalizedRotation;
-        
-        // Normalize pointer angle to 0-2PI
-        while (pointerAngle < 0) pointerAngle += 2 * Math.PI;
-        pointerAngle %= (2 * Math.PI);
+function determineWinner(finalRotation) {
+    // Normalize rotation to 0-2PI
+    const normalizedRotation = finalRotation % (2 * Math.PI);
+    
+    // The pointer is at the top (3PI/2 or 270 degrees)
+    // The wheel rotated clockwise by `normalizedRotation`.
+    // We need to find which "slice" is at 3PI/2.
+    // Effectively, we can treat the pointer as being at (3PI/2 - normalizedRotation) in the wheel's static frame.
+    
+    let pointerAngle = (3 * Math.PI / 2) - normalizedRotation;
+    
+    // Normalize pointer angle to 0-2PI
+    while (pointerAngle < 0) pointerAngle += 2 * Math.PI;
+    pointerAngle %= (2 * Math.PI);
 
-        const winningIndex = Math.floor(pointerAngle / arc);
-        const winner = currentEntries[winningIndex];
+    const totalWeight = currentEntries.reduce((sum, entry) => sum + (entry.weight || 1), 0);
+    let currentAngle = 0;
+    let winner = null;
 
-        showWinner(winner);
+    for (const entry of currentEntries) {
+        const sliceWeight = entry.weight || 1;
+        const sliceAngle = (sliceWeight / totalWeight) * 2 * Math.PI;
+        
+        // Check if pointer is within this slice
+        if (pointerAngle >= currentAngle && pointerAngle < currentAngle + sliceAngle) {
+            winner = entry;
+            break;
+        }
+        
+        currentAngle += sliceAngle;
     }
+    
+    // Fallback if floating point errors cause a miss (should be very rare, usually last item)
+    if (!winner && currentEntries.length > 0) {
+        winner = currentEntries[currentEntries.length - 1];
+    }
+
+    showWinner(winner);
+}
 
     function showWinner(winner) {
         winnerName.textContent = winner.name;
@@ -365,31 +481,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // Confetti effect could go here
         console.log("Winner:", winner);
 
-        // Save winner to backend
-        fetch('/api/winner', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                id: winner.id,
-                name: winner.name,
-                day: document.getElementById('day-select').value
-            })
-        }).then(res => res.json())
-          .then(data => {
-              if (data.success) {
-                  console.log('Winner saved successfully');
-              } else {
-                  console.error('Failed to save winner:', data.error);
-              }
-          })
-          .catch(err => console.error('Error saving winner:', err));
+        if (endOfEventCheckbox.checked) {
+            console.log('End of Event Mode: Winner NOT saved to backend. Scheduling removal for when dialog closes.');
+            // Defer removal to closeWinnerBtn click handler
+            pendingRemovalId = winner.id;
+            
+            // Note: We don't update the wheel YET. It stays static pointing at the winner.
+        } else {
+            // Save winner to backend
+            fetch('/api/winner', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: winner.id,
+                    name: winner.name,
+                    day: document.getElementById('day-select').value
+                })
+            }).then(res => res.json())
+              .then(data => {
+                  if (data.success) {
+                      console.log('Winner saved successfully');
+                  } else {
+                      console.error('Failed to save winner:', data.error);
+                  }
+              })
+              .catch(err => console.error('Error saving winner:', err));
+        }
     }
 
     function resetWheel() {
         currentEntries = [];
         currentRotation = 0;
+        pendingRemovalId = null;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         toggleWheelControls(false);
         winnerDisplay.classList.add('hidden');
